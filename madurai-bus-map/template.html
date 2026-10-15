@@ -1,8 +1,5 @@
 <title>Madurai Bus Network</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>/*__LEAFLET_CSS__*/</style>
 <style>
 /* Layout: full-height map with a docked control panel (left on desktop, bottom sheet on phones). */
@@ -21,9 +18,10 @@
   --map-casing: #c9cdc6;
   --map-water: #b9d3dc;
   --stop: #2f3a36;
-  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
-  --font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  /* System fonts only: the page must work with no network at all. */
+  --font-display: ui-rounded, "SF Pro Rounded", "Segoe UI Variable Display", "Segoe UI", Roboto, system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Tamil", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Roboto Mono", Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -180,7 +178,7 @@ footer p { margin: 0 0 6px; }
 </aside>
 <div id="map" role="region" aria-label="Map of Madurai bus routes"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>/*__LEAFLET_JS__*/</script>
 <script id="data" type="application/json">__DATA__</script>
 <script>
 (function () {

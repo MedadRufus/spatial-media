@@ -1,8 +1,13 @@
 # Madurai Bus Network map
 
 An interactive map of TNSTC Madurai city bus routes, drawn over open
-OpenStreetMap bus stops and bus stands. Open `index.html` in a browser. It is
-fully self-contained and loads only Leaflet and fonts from a CDN.
+OpenStreetMap bus stops and bus stands.
+
+**Works fully offline.** `index.html` is one self-contained file. Leaflet,
+the map styling, the basemap (roads, river, tanks) and every route are
+embedded, and it uses system fonts. Copy it to your phone or laptop and open
+it in any browser with no signal. Nothing is fetched at runtime. The only
+network-dependent items are the optional "Full stop list on MaduraiOne" links.
 
 ## What open data exists (October 2026)
 
@@ -47,7 +52,7 @@ keeps two kinds of layer apart.
 ```sh
 pip install requests
 python3 fetch_data.py      # writes data/*.geojson; caches responses in .cache/
-python3 build_map.py       # bundles template.html + data into index.html
+python3 build_map.py       # bundles template.html + data + vendor/leaflet into index.html (offline)
 ```
 
 `fetch_data.py` rate-limits itself (about 2 requests/s to MaduraiOne, 1/s to
