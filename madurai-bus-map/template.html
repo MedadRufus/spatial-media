@@ -1,0 +1,344 @@
+<title>Madurai Bus Network</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>/*__LEAFLET_CSS__*/</style>
+<style>
+/* Layout: full-height map with a docked control panel (left on desktop, bottom sheet on phones). */
+:root {
+  --bg: #f3f4f1;
+  --panel: #fbfbf9;
+  --fg: #1d2421;
+  --muted: #5d6762;
+  --line: #d9ddd8;
+  --accent: #b4462b;        /* kumkum red, used for selection */
+  --board: #1b1d1c;         /* bus destination board */
+  --led: #ffb21f;           /* amber LED text */
+  --map-land: #eceee9;
+  --map-road: #ffffff;
+  --map-major: #f7e3b8;
+  --map-casing: #c9cdc6;
+  --map-water: #b9d3dc;
+  --stop: #2f3a36;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121615; --panel: #171c1a; --fg: #e5e9e6; --muted: #9aa49f; --line: #2b3330;
+    --accent: #ff7a59; --board: #050606; --led: #ffbe3d;
+    --map-land: #161b19; --map-road: #2a312e; --map-major: #4a4130; --map-casing: #1f2523;
+    --map-water: #1f3a44; --stop: #c9d1cc; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121615; --panel: #171c1a; --fg: #e5e9e6; --muted: #9aa49f; --line: #2b3330;
+  --accent: #ff7a59; --board: #050606; --led: #ffbe3d;
+  --map-land: #161b19; --map-road: #2a312e; --map-major: #4a4130; --map-casing: #1f2523;
+  --map-water: #1f3a44; --stop: #c9d1cc; color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px;
+  display: grid; grid-template-columns: 360px minmax(0, 1fr); overflow: hidden;
+}
+#map { height: 100%; background: var(--map-land); }
+.leaflet-container { background: var(--map-land); font-family: var(--font-body); }
+.leaflet-control-attribution { background: color-mix(in srgb, var(--panel) 85%, transparent) !important; color: var(--muted) !important; font-size: 10.5px; max-width: 70vw; }
+.leaflet-control-attribution a { color: var(--fg) !important; }
+.leaflet-bar a { background: var(--panel); color: var(--fg); border-bottom-color: var(--line); }
+.leaflet-bar a:hover { background: var(--bg); }
+.leaflet-tooltip { background: var(--board); color: var(--led); border: 0; font-family: var(--font-mono); font-size: 12px; box-shadow: none; }
+.leaflet-tooltip::before { display: none; }
+
+aside {
+  background: var(--panel); border-right: 1px solid var(--line); height: 100%;
+  display: flex; flex-direction: column; min-height: 0; min-width: 0;
+}
+header { padding-block: 18px 12px; padding-inline: 18px; border-bottom: 1px solid var(--line); display: grid; gap: 6px; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: 1.6rem; line-height: 1.05; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h1 span { font-weight: 600; color: var(--muted); }
+.lede { margin: 0; color: var(--muted); line-height: 1.45; font-size: 0.86rem; }
+.stats { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.stats div { display: grid; }
+.stats b { font-family: var(--font-display); font-size: 1.25rem; font-weight: 800; }
+.stats small { color: var(--muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; }
+
+.scroll { overflow-y: auto; flex: 1; min-height: 0; }
+section { padding: 14px 18px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+h2 { margin: 0; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+.layer { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: start; cursor: pointer; }
+.layer input { margin: 2px 0 0; accent-color: var(--accent); width: 16px; height: 16px; }
+.layer strong { font-weight: 600; }
+.layer em { grid-column: 2; font-style: normal; color: var(--muted); font-size: 0.78rem; line-height: 1.4; }
+.tag { display: inline-block; font-size: 0.66rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--line); color: var(--muted); margin-left: 6px; vertical-align: 1px; font-weight: 600; }
+.tag.open { border-color: color-mix(in srgb, #2e8b57 50%, var(--line)); color: #2e8b57; }
+.tag.caveat { border-color: color-mix(in srgb, #c27c0e 50%, var(--line)); color: #b06f08; }
+
+.spokes { display: flex; flex-wrap: wrap; gap: 6px; }
+.spoke { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: transparent; color: var(--fg); border-radius: 999px; padding: 4px 10px 4px 8px; font: inherit; font-size: 0.78rem; cursor: pointer; font-variant-numeric: tabular-nums; }
+.spoke i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.spoke span { color: var(--muted); }
+.spoke[aria-pressed="false"] { opacity: 0.45; }
+.spoke[aria-pressed="false"] i { background: transparent !important; outline: 1.5px solid var(--muted); outline-offset: -1.5px; }
+
+.search { position: relative; }
+.search input { width: 100%; box-sizing: border-box; font: inherit; padding: 9px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); }
+.search input:focus-visible, button:focus-visible, .layer input:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+ol.routes { list-style: none; margin: 0; padding: 0; display: grid; }
+ol.routes li button {
+  width: 100%; display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 10px; align-items: center;
+  border: 0; background: none; color: var(--fg); font: inherit; text-align: left; padding: 7px 4px; cursor: pointer; border-radius: 4px;
+}
+ol.routes li button:hover { background: var(--bg); }
+ol.routes li button[aria-current="true"] { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.board {
+  font-family: var(--font-mono); font-weight: 700; background: var(--board); color: var(--led);
+  border-radius: 3px; padding: 3px 6px; font-size: 0.8rem; text-align: center; letter-spacing: 0.04em;
+  border-left: 4px solid var(--spoke, var(--led)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rname { font-size: 0.82rem; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; }
+.rname small { display: block; color: var(--muted); font-size: 0.72rem; }
+.more { color: var(--muted); font-size: 0.78rem; padding: 6px 4px; }
+
+#detail { display: grid; gap: 10px; }
+#detail .head { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+#detail .board { font-size: 1.05rem; padding: 5px 10px; }
+#detail h3 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; line-height: 1.2; flex: 1; min-width: 0; }
+#detail dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+#detail dt { color: var(--muted); }
+#detail dd { margin: 0; }
+.via { list-style: none; margin: 0; padding: 0 0 0 4px; display: grid; gap: 0; font-size: 0.8rem; }
+.via li { position: relative; padding: 3px 0 3px 18px; }
+.via li::before { content: ""; position: absolute; left: 3px; top: 0; bottom: 0; width: 2px; background: var(--spoke, var(--accent)); }
+.via li::after { content: ""; position: absolute; left: 0; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: var(--panel); border: 2px solid var(--spoke, var(--accent)); box-sizing: border-box; }
+.via li:first-child::before { top: 50%; } .via li:last-child::before { bottom: 50%; }
+.via li.unplaced { color: var(--muted); }
+.via li.unplaced::after { border-style: dashed; }
+.via small { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.note { font-size: 0.74rem; color: var(--muted); line-height: 1.45; margin: 0; }
+.x { border: 1px solid var(--line); background: none; color: var(--fg); border-radius: 4px; font: inherit; font-size: 0.78rem; padding: 3px 8px; cursor: pointer; }
+a { color: var(--accent); }
+footer { padding: 12px 18px; font-size: 0.72rem; color: var(--muted); line-height: 1.5; border-top: 1px solid var(--line); }
+footer p { margin: 0 0 6px; }
+
+@media (max-width: 760px) {
+  body { grid-template-columns: minmax(0, 1fr); grid-template-rows: 48% 52%; }
+  #map { grid-row: 1; }
+  aside { grid-row: 2; border-right: 0; border-top: 1px solid var(--line); }
+  header, section, footer { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  h1 { font-size: 1.3rem; }
+  .lede { display: none; }
+}
+@media (min-width: 761px) {
+  aside { padding-left: env(safe-area-inset-left, 0px); }
+  #map { margin-right: env(safe-area-inset-right, 0px); }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<aside>
+  <header>
+    <h1>Madurai Bus Network <span>மதுரை</span></h1>
+    <p class="lede">Every TNSTC Madurai city bus route in the MaduraiOne CityBus database, drawn over open OpenStreetMap stops and bus stands.</p>
+    <div class="stats">
+      <div><b id="s-routes">–</b><small>Route variants</small></div>
+      <div><b id="s-buses">–</b><small>Bus numbers</small></div>
+      <div><b id="s-stops">–</b><small>OSM stops</small></div>
+    </div>
+  </header>
+  <div class="scroll">
+    <section aria-labelledby="h-layers">
+      <h2 id="h-layers">Layers</h2>
+      <label class="layer"><input type="checkbox" id="l-routes" checked><strong>Bus routes <span class="tag caveat">MaduraiOne</span></strong>
+        <em>Main stops from MaduraiOne, joined along OSM roads. Paths between those stops are approximate.</em></label>
+      <label class="layer"><input type="checkbox" id="l-stations" checked><strong>Bus stands <span class="tag open">Open data</span></strong>
+        <em>OpenStreetMap bus stations (ODbL).</em></label>
+      <label class="layer"><input type="checkbox" id="l-stops" checked><strong>Bus stops <span class="tag open">Open data</span></strong>
+        <em>OpenStreetMap bus stops (ODbL). OSM has no Madurai bus route relations yet.</em></label>
+    </section>
+    <section aria-labelledby="h-spokes">
+      <h2 id="h-spokes"><span>Corridors</span><span>tap to filter</span></h2>
+      <div class="spokes" id="spokes"></div>
+    </section>
+    <section id="detail-wrap" aria-live="polite" hidden>
+      <div id="detail"></div>
+    </section>
+    <section aria-labelledby="h-list">
+      <h2 id="h-list"><span>Routes</span><span id="count"></span></h2>
+      <div class="search"><input id="q" type="search" placeholder="Bus number or place, e.g. 10A, Thiruparankundram" autocomplete="off" aria-label="Search routes"></div>
+      <ol class="routes" id="list"></ol>
+    </section>
+  </div>
+  <footer>
+    <p>Stops, stands, roads and water © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>, ODbL. Snapped with <a href="https://project-osrm.org/" target="_blank" rel="noopener">OSRM</a>.</p>
+    <p>Route lists: <a href="https://maduraione.in" target="_blank" rel="noopener">MaduraiOne CityBus</a>, via its public API. MaduraiOne publishes no open licence for this data. Retrieved <span id="retrieved"></span>.</p>
+  </footer>
+</aside>
+<div id="map" role="region" aria-label="Map of Madurai bus routes"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script id="data" type="application/json">__DATA__</script>
+<script>
+(function () {
+  const D = JSON.parse(document.getElementById("data").textContent);
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const SPOKE_ORDER = ["CORE", "NORTH", "NORTH_EAST", "EAST", "SOUTH", "SOUTH_WEST", "WEST", "NORTH_WEST"];
+  const PALETTE = ["#b4462b", "#2a7ab0", "#7b52ab", "#1f9e89", "#d4880f", "#c2417f", "#4d8f2f", "#6b6f9e", "#8a6d3b"];
+  const spokes = [...new Set(D.routes.features.map(f => f.properties.spoke || "OTHER"))]
+    .sort((a, b) => (SPOKE_ORDER.indexOf(a) + 99) % 108 - (SPOKE_ORDER.indexOf(b) + 99) % 108 || a.localeCompare(b));
+  const colorOf = {}; spokes.forEach((s, i) => colorOf[s] = PALETTE[i % PALETTE.length]);
+  const label = (s) => s.split("_").map(w => w[0] + w.slice(1).toLowerCase()).join("-");
+  const title = (s) => s.toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase());
+  const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  document.getElementById("s-routes").textContent = D.routes.features.length.toLocaleString();
+  document.getElementById("s-buses").textContent = new Set(D.routes.features.map(f => f.properties.bus)).size.toLocaleString();
+  document.getElementById("s-stops").textContent = D.stops.features.length.toLocaleString();
+  document.getElementById("retrieved").textContent = D.routes.metadata.retrieved || "";
+
+  const map = L.map("map", { preferCanvas: true, zoomControl: true, attributionControl: true }).setView([9.925, 78.12], 12);
+  map.attributionControl.setPrefix(false).addAttribution('© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OSM</a> · routes <a href="https://maduraione.in" target="_blank" rel="noopener">MaduraiOne</a>');
+  const renderer = L.canvas({ padding: 0.3, tolerance: 4 });
+
+  // Basemap
+  const base = L.geoJSON(D.basemap, { renderer, interactive: false, style: baseStyle }).addTo(map);
+  function baseStyle(f) {
+    const k = f.properties.k;
+    if (k === "water") return { stroke: false, fillColor: css("--map-water"), fillOpacity: 1 };
+    if (k === "river") return { color: css("--map-water"), weight: 4, opacity: 1 };
+    if (k === "major") return { color: css("--map-major"), weight: 3.2, opacity: 1 };
+    return { color: css("--map-road"), weight: 1.8, opacity: 1 };
+  }
+
+  // Routes
+  const active = new Set(spokes);
+  let selected = null;
+  const routesLayer = L.geoJSON(D.routes, {
+    renderer,
+    style: routeStyle,
+    onEachFeature: (f, layer) => {
+      layer.bindTooltip(f.properties.bus + " · " + title(f.properties.name), { sticky: true, direction: "top", offset: [0, -6] });
+      layer.on("click", (e) => { L.DomEvent.stopPropagation(e); select(f); });
+    },
+  }).addTo(map);
+  function routeStyle(f) {
+    const p = f.properties, on = active.has(p.spoke || "OTHER");
+    if (!on) return { opacity: 0, weight: 0, interactive: false };
+    if (selected) {
+      if (f === selected) return { color: colorOf[p.spoke || "OTHER"], weight: 5, opacity: 1 };
+      return { color: colorOf[p.spoke || "OTHER"], weight: 1, opacity: 0.12 };
+    }
+    return { color: colorOf[p.spoke || "OTHER"], weight: 1.4, opacity: 0.42, dashArray: p.snapped ? null : "4 4" };
+  }
+
+  // Open data points
+  const stops = L.geoJSON(D.stops, {
+    renderer,
+    pointToLayer: (f, ll) => L.circleMarker(ll, { radius: 2.6, weight: 0, fillColor: css("--stop"), fillOpacity: 0.85 }),
+    onEachFeature: (f, l) => l.bindTooltip(esc(f.properties.name || "Bus stop")),
+  });
+  const stations = L.geoJSON(D.stations, {
+    renderer,
+    pointToLayer: (f, ll) => L.circleMarker(ll, { radius: 6, color: css("--board"), weight: 2, fillColor: css("--led"), fillOpacity: 1 }),
+    onEachFeature: (f, l) => l.bindTooltip(esc(f.properties.name || "Bus stand"), { permanent: false }),
+  });
+  map.on("zoomend", () => {
+    if (document.getElementById("l-stops").checked) map.getZoom() >= 13 ? stops.addTo(map) : stops.remove();
+  });
+  stations.addTo(map);
+  if (map.getZoom() >= 13) stops.addTo(map);
+
+  function toggle(id, layer, cond) {
+    document.getElementById(id).addEventListener("change", (e) => {
+      if (e.target.checked && (!cond || cond())) layer.addTo(map); else layer.remove();
+    });
+  }
+  toggle("l-routes", routesLayer);
+  toggle("l-stations", stations);
+  toggle("l-stops", stops, () => map.getZoom() >= 13);
+  stations.bringToFront();
+
+  // Corridor chips
+  const counts = {}; D.routes.features.forEach(f => { const s = f.properties.spoke || "OTHER"; counts[s] = (counts[s] || 0) + 1; });
+  const chipWrap = document.getElementById("spokes");
+  spokes.forEach(s => {
+    const b = document.createElement("button");
+    b.className = "spoke"; b.type = "button"; b.setAttribute("aria-pressed", "true");
+    b.innerHTML = `<i style="background:${colorOf[s]}"></i>${esc(label(s))} <span>${counts[s]}</span>`;
+    b.addEventListener("click", () => {
+      active.has(s) ? active.delete(s) : active.add(s);
+      if (!active.size) spokes.forEach(x => active.add(x));
+      chipWrap.querySelectorAll(".spoke").forEach((el, i) => el.setAttribute("aria-pressed", active.has(spokes[i])));
+      routesLayer.setStyle(routeStyle); renderList();
+    });
+    chipWrap.appendChild(b);
+  });
+
+  // List + search
+  const q = document.getElementById("q"), list = document.getElementById("list");
+  const sortKey = (b) => b.replace(/(\d+)/g, m => m.padStart(4, "0"));
+  const all = D.routes.features.slice().sort((a, b) => sortKey(a.properties.bus).localeCompare(sortKey(b.properties.bus)));
+  const LIMIT = 150;
+  function matches(f, term) {
+    if (!term) return true;
+    const p = f.properties;
+    return p.bus.toLowerCase() === term || p.bus.toLowerCase().startsWith(term) ||
+      p.name.toLowerCase().includes(term) || p.via.some(v => v.toLowerCase().includes(term));
+  }
+  function renderList() {
+    const term = q.value.trim().toLowerCase();
+    const rows = all.filter(f => active.has(f.properties.spoke || "OTHER") && matches(f, term));
+    document.getElementById("count").textContent = rows.length.toLocaleString() + " shown";
+    list.innerHTML = rows.slice(0, LIMIT).map((f) => {
+      const p = f.properties, i = all.indexOf(f);
+      return `<li><button type="button" data-i="${i}" aria-current="${f === selected}"><span class="board" style="--spoke:${colorOf[p.spoke || "OTHER"]}">${esc(p.bus)}</span><span class="rname">${esc(title(p.name))}<small>${esc(label(p.spoke || "OTHER"))}${p.km ? " · " + p.km + " km" : ""}</small></span></button></li>`;
+    }).join("") + (rows.length > LIMIT ? `<li class="more">${rows.length - LIMIT} more. Narrow the search to see them.</li>` : "");
+  }
+  list.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-i]"); if (b) select(all[+b.dataset.i], true);
+  });
+  q.addEventListener("input", renderList);
+
+  function select(f, fly) {
+    selected = f;
+    routesLayer.setStyle(routeStyle);
+    const wrap = document.getElementById("detail-wrap"), det = document.getElementById("detail");
+    if (!f) { wrap.hidden = true; renderList(); return; }
+    let lyr; routesLayer.eachLayer(l => { if (l.feature === f) lyr = l; });
+    if (lyr) { lyr.bringToFront(); if (fly) map.fitBounds(lyr.getBounds(), { padding: [30, 30], maxZoom: 15 }); }
+    const p = f.properties, c = colorOf[p.spoke || "OTHER"];
+    det.style.setProperty("--spoke", c);
+    det.innerHTML = `
+      <div class="head"><span class="board" style="--spoke:${c}">${esc(p.bus)}</span><h3>${esc(title(p.name))}</h3><button class="x" type="button" id="clear">Clear</button></div>
+      <dl>
+        <dt>Corridor</dt><dd>${esc(label(p.spoke || "OTHER"))}</dd>
+        ${p.platform ? `<dt>Periyar stand</dt><dd>${esc(p.platform)}</dd>` : ""}
+        <dt>Stops</dt><dd>${p.total_stops ?? "–"} in total, main stops shown below</dd>
+        ${p.km ? `<dt>Length</dt><dd>about ${p.km} km by road</dd>` : ""}
+      </dl>
+      <ol class="via">${p.via.map((v, i) => `<li${p.located && !p.located[i] ? ' class="unplaced"' : ""}>${esc(title(v))}${p.located && !p.located[i] ? " <small>not on map</small>" : ""}</li>`).join("")}</ol>
+      ${p.snapped ? "" : `<p class="note">No road path was found for this route, so it is drawn as straight dashed lines between stops.</p>`}
+      ${p.url ? `<p class="note"><a href="${esc(p.url)}" target="_blank" rel="noopener">Full stop list on MaduraiOne</a></p>` : ""}`;
+    wrap.hidden = false;
+    document.getElementById("clear").addEventListener("click", () => select(null));
+    renderList();
+    wrap.scrollIntoView({ block: "nearest" });
+  }
+  map.on("click", () => selected && select(null));
+
+  // Re-colour basemap and points when the theme changes
+  function restyle() {
+    base.setStyle(baseStyle);
+    stops.setStyle({ fillColor: css("--stop") });
+    stations.setStyle({ color: css("--board"), fillColor: css("--led") });
+  }
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", restyle);
+  new MutationObserver(restyle).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  renderList();
+})();
+</script>
